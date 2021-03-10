@@ -50,6 +50,16 @@ class DCGAN:
         # apply another upsample and transposed convolution, but
         # this time output the TANH activation
         model.add(Conv2DTranspose(channels, (5, 5), strides=(2, 2),	padding="same"))
+        #######################################
+        model.add(Activation("relu"))
+        model.add(BatchNormalization(axis=chanDim))
+        model.add(Conv2DTranspose(channels, (5, 5), strides=(2, 2),	padding="same"))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization(axis=chanDim))
+        model.add(Conv2DTranspose(channels, (5, 5), strides=(2, 2),	padding="same"))
+        model.add(Activation("relu"))
+        model.add(BatchNormalization(axis=chanDim))
+        #######################################
         model.add(Activation("tanh"))
         # return the generator model
         return model
