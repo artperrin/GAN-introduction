@@ -7,6 +7,7 @@ from assets.dcgan import DCGAN
 import logging as lg
 from assets import config
 import argparse
+import pathlib
 
 lg.getLogger().setLevel(lg.INFO)
 
@@ -38,10 +39,13 @@ args = vars(ap.parse_args())
 NUM_EPOCHS = args["epochs"]
 BATCH_SIZE = args["batch_size"]
 GRAYSCALE = args["grayscale"]
+
 if args["output_generated"]:
     generated_path = './output/generated'
+    pathlib.Path(generated_path).mkdir(parents=True, exist_ok=True)
 if args["output_plots"]:
     plots_path = './output/plots'
+    pathlib.Path(plots_path).mkdir(parents=True, exist_ok=True)
 
 INIT_LR_DISC = config.INIT_LR_DISC
 INIT_LR_GAN = config.INIT_LR_GAN
