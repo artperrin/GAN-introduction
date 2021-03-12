@@ -87,17 +87,9 @@ gan = Model(ganInput, ganOutput)
 ganOpt = Adam(lr=INIT_LR_GAN, beta_1=0.5, decay=INIT_LR_GAN / NUM_EPOCHS)
 gan.compile(loss="binary_crossentropy", optimizer=ganOpt)
 
-# randomly generate some benchmark noise so we can consistently
-# visualize how the generative modeling is learning
-lg.info("Starting training...")
-
 # setting useful variable
-batchesPerEpoch = int(trainImages.shape[0] / BATCH_SIZE)
-
-model = dcgan(gen, disc, gan, BATCH_SIZE, NUM_EPOCHS, batchesPerEpoch)
-
+model = dcgan(gen, disc, gan, BATCH_SIZE, NUM_EPOCHS)
 model.train(trainImages, generated_path, plots_path=plots_path)
-
 model.export_training_data(plots_path)
 
 if args["model_output"] is not None:

@@ -191,7 +191,7 @@ class dataset_handler:
 class dcgan:
     """Simplify the training process
     """
-    def __init__(self, gen, disc, gan, BATCH_SIZE, NUM_EPOCHS, batchesPerEpoch):
+    def __init__(self, gen, disc, gan, BATCH_SIZE, NUM_EPOCHS):
         """initialisation of useful variables
 
         Parameters
