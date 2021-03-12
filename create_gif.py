@@ -6,17 +6,18 @@ import numpy as np
 
 path = './output/'
 NbImages = 100
+pas = 500
 
 paths = list(paths.list_files(path))
 
 generated = []
 plots = []
 for p in range(1, NbImages+1):
-    name = os.path.join(path, f'generated/Epoch_{p}.jpg')
+    name = os.path.join(path, f'generated/Epoch_{p*pas}.jpg')
     img = cv2.imread(name)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     generated.append(img)
-    name = os.path.join(path, f'plots/loss_plots_epoch_{p}.png')
+    name = os.path.join(path, f'plots/loss_plots_epoch_{p*pas}.png')
     img = cv2.imread(name)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     plots.append(img)

@@ -350,6 +350,7 @@ def save_graph(plots_path, epoch, X, Y):
     out = os.path.join(plots_path, f'loss_plots_epoch_{epoch+1}.png')
     plt.figure(figsize=(20, 7))
     plt.grid()
+    plt.ylim([0, 20])
     plt.plot(X, color='r', label='disc')
     plt.plot(Y, color='b', label='gan')
     plt.legend()
