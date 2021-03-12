@@ -3,5 +3,4 @@ venv
 __pycache__
 output
 data
-data_stone
 logs

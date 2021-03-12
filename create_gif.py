@@ -1,36 +1,56 @@
-from imutils import paths, build_montages, resize
+from imutils import paths, resize
 from PIL import Image
-import os
+from os.path import join
+import logging as lg
 import cv2
 import numpy as np
+import argparse
 
-path = './output/'
-NbImages = 100
-pas = 500
+lg.getLogger().setLevel(lg.INFO)
 
-paths = list(paths.list_files(path))
+ap = argparse.ArgumentParser()
+ap.add_argument("-g", "--output-generated", type=str, required=True,
+    help="path to generated images")
+ap.add_argument("-o", "--path", type=str, default='./',
+    help="path to output animation")
+ap.add_argument("-p", "--output-plots", type=str, default=None, 
+    help="path to plots if wanted")
+args = vars(ap.parse_args())
+
+lg.info('Reading generated files...')
+paths_generated = list(paths.list_files(args["output_generated"]))
+paths_generated = sorted(paths_generated, key=lambda x:len(x))
 
 generated = []
-plots = []
-for p in range(1, NbImages+1):
-    name = os.path.join(path, f'generated/Epoch_{p*pas}.jpg')
-    img = cv2.imread(name)
+for path in paths_generated:
+    img = cv2.imread(path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     generated.append(img)
-    name = os.path.join(path, f'plots/loss_plots_epoch_{p*pas}.png')
-    img = cv2.imread(name)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    plots.append(img)
 
-frames = []
-for i in range(NbImages):
-    gen = generated[i]
-    h, w = gen.shape[0], gen.shape[1]
-    plo = resize(plots[i], height=h)
-    gen = np.array(gen)
-    plo = np.array(plo)
-    frame = np.concatenate((gen, plo), axis = 1).astype('uint8')
-    frame = Image.fromarray(frame)
-    frames.append(frame)
+frames = [Image.fromarray(np.array(gen)) for gen in generated]
 
-frames[0].save('animated.gif', save_all = True, append_images = frames[1:], optimize = False, duration = 40, loop=0)
+if args["output_plots"] is not None:
+    lg.info('Reading plots files...')
+    h, w = generated[0].shape[0], generated[0].shape[1]
+    paths_plots = list(paths.list_files(args["output_plots"]))
+    paths_plots = sorted(paths_plots, key=lambda x:len(x))
+    plots = []
+
+    for path in paths_plots:
+        img = cv2.imread(path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        plots.append(img)
+    frames = []
+
+    lg.info('Formatting output images...')
+    for i in range(len(generated)):
+        gen = generated[i]
+        gen = np.array(gen)
+        plo = resize(plots[i], height=h)
+        plo = np.array(plo)
+        frame = np.concatenate((gen, plo), axis = 1).astype('uint8')
+        frame = Image.fromarray(frame)
+        frames.append(frame)
+
+lg.info('Exporting animation...')
+frames[0].save(join(args["path"], 'animation.gif'), save_all = True, append_images = frames[1:], optimize = False, duration = 40, loop=0)
