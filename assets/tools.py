@@ -93,7 +93,7 @@ class timer:
                     unit = 'h'
         
         if output_as_string:
-            return f'{round(res,2)} {unit}'
+            return f'{str(round(res,2)).zfill(5)} {unit}'
         else:
             return round(res,2)
 
@@ -164,7 +164,7 @@ class dataset_handler:
                     progress += '='
                 else:
                     progress += '.'
-            print(f'{p+1}/{end} |{progress}|', end='\r', flush=True)
+            print(f'{str(p+1).zfill(len(str(end)))}/{end} |{progress}|', end='\r', flush=True)
         print('')
         lg.info(f'Found {len(self.images)} faces, {end - len(self.images)} images removed.')
 
@@ -284,7 +284,7 @@ class dcgan:
                     # display training statuss
                     self.chrono.update()
                     time_spent = self.chrono.get_time()
-                    print(f'Time spent : {time_spent} | {round(eps.update(), 2)} s/epoch | Epoch {epoch+1}/{self.NUM_EPOCHS} ({round((epoch+1)/self.NUM_EPOCHS*100, 2)} %) |{progress}| mean disc loss = {round(meanDL, 4)} ; mean gan Loss = {round(meanGL,4)}', end='\r', flush=True)
+                    print(f'Time spent : {time_spent} | {str(round(eps.update(), 2)).zfill(4)} s/epoch | Epoch {str(epoch+1).zfill(len(str(self.NUM_EPOCHS)))}/{self.NUM_EPOCHS} ({str(round((epoch+1)/self.NUM_EPOCHS*100, 2)).zfill(5)} %) |{progress}| mean disc loss = {str(round(meanDL, 4)).zfill(6)} ; mean gan Loss = {str(round(meanGL,4)).zfill(6)}', end='\r', flush=True)
                     # store loss per epochs values
                     self.DLOSS.append(meanDL)
                     self.GLOSS.append(meanGL)
