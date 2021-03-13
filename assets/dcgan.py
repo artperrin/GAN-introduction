@@ -32,7 +32,7 @@ class DCGAN:
       Parameters
       ----------
       dim : int
-          wanted dimension of the generated image (square), must be multiple of 32 (5 upsampling layers)
+          wanted dimension of the generated image (square), must be multiple of 16 (4 upsampling layers)
       depth : int
           depth of the wanted volume
       channels : int, optional
@@ -47,7 +47,7 @@ class DCGAN:
       tensorflow.python.keras.engine.sequential.Sequential
           model of the generator
       """
-      dim = dim//32
+      dim = dim//16
       # initialize the model along with the input shape to be
       # "channels last" and the channels dimension itself
       model = Sequential()
@@ -77,10 +77,6 @@ class DCGAN:
       model.add(Activation("relu"))
       model.add(BatchNormalization(axis=chanDim))
       # apply 4 other upsample and transposed convolution
-      model.add(Conv2DTranspose(channels, (5, 5), strides=(2, 2),	padding="same"))
-      model.add(Activation("relu"))
-      model.add(BatchNormalization(axis=chanDim))
-      # apply 5 other upsample and transposed convolution
       model.add(Conv2DTranspose(channels, (5, 5), strides=(2, 2),	padding="same"))
       model.add(Activation("relu"))
       model.add(BatchNormalization(axis=chanDim))
