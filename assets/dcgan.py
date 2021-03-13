@@ -32,7 +32,7 @@ class DCGAN:
       Parameters
       ----------
       dim : int
-          wanted dimension of the generated image (square), must be multiple of 80 (3 upsampling layers)
+          wanted dimension of the generated image (square), must be multiple of 32 (5 upsampling layers)
       depth : int
           depth of the wanted volume
       channels : int, optional
@@ -47,7 +47,7 @@ class DCGAN:
       tensorflow.python.keras.engine.sequential.Sequential
           model of the generator
       """
-      dim = dim//8
+      dim = dim//32
       # initialize the model along with the input shape to be
       # "channels last" and the channels dimension itself
       model = Sequential()
@@ -63,15 +63,24 @@ class DCGAN:
       model.add(Activation("relu"))
       model.add(BatchNormalization())
       # reshape the output of the previous layer set, upsample +
-      # apply a transposed convolution, RELU, and BN
+      # apply 1 a transposed convolution, RELU, and BN
       model.add(Reshape(inputShape))
       model.add(Conv2DTranspose(32, (5, 5), strides=(2, 2), padding="same"))
       model.add(Activation("relu"))
       model.add(BatchNormalization(axis=chanDim))
-      # apply other upsample and transposed convolution
+      # apply 2 other upsample and transposed convolution
       model.add(Conv2DTranspose(channels, (5, 5), strides=(2, 2),	padding="same"))
       model.add(Activation("relu"))
       model.add(BatchNormalization(axis=chanDim))
+      # apply 3 other upsample and transposed convolution
+      model.add(Conv2DTranspose(channels, (5, 5), strides=(2, 2),	padding="same"))
+      model.add(Activation("relu"))
+      model.add(BatchNormalization(axis=chanDim))
+      # apply 4 other upsample and transposed convolution
+      model.add(Conv2DTranspose(channels, (5, 5), strides=(2, 2),	padding="same"))
+      model.add(Activation("relu"))
+      model.add(BatchNormalization(axis=chanDim))
+      # apply 5 other upsample and transposed convolution
       model.add(Conv2DTranspose(channels, (5, 5), strides=(2, 2),	padding="same"))
       model.add(Activation("relu"))
       model.add(BatchNormalization(axis=chanDim))

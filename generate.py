@@ -49,17 +49,19 @@ if args["output_plots"]:
 
 INIT_LR_DISC = config.INIT_LR_DISC
 INIT_LR_GAN = config.INIT_LR_GAN
-W, H = config.image_shape[0], config.image_shape[1]
+W, H = config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1]
+input_noise_dim = config.NOISE_RES
+img_visu = config.IMG_VISU
 
 global_time = timer()
 # load the dataset
 dataset = dataset_handler(args["dataset"])
 
-dataset.load(args["grayscale"], args["face_detection"], args["limit_images"])
+dataset.load((W, H), args["grayscale"], args["face_detection"], args["limit_images"])
 
 trainImages = dataset.pre_process()
 
-if len(trainImages) < BATCH_SIZE:
+if len(trainImages) <= BATCH_SIZE:
     lg.warning('Not enough data for the batch, change batch size or expand dataset!')
 
 if GRAYSCALE:
@@ -69,7 +71,7 @@ else:
 
 # build the generator
 lg.info("Building generator and discriminator...")
-gen = DCGAN.build_generator(W, 64, channels=NbChannels)
+gen = DCGAN.build_generator(W, 64, channels=NbChannels, inputDim=input_noise_dim)
 # build the discriminator
 disc = DCGAN.build_discriminator(W, H, NbChannels)
 discOpt = Adam(lr=INIT_LR_DISC, beta_1=0.5, decay=INIT_LR_DISC / NUM_EPOCHS)
@@ -80,7 +82,7 @@ disc.compile(loss="binary_crossentropy", optimizer=discOpt)
 # together
 lg.info("Building GAN...")
 disc.trainable = False
-ganInput = Input(shape=(100,))
+ganInput = Input(shape=(input_noise_dim,))
 ganOutput = disc(gen(ganInput))
 gan = Model(ganInput, ganOutput)
 # compile the GAN
@@ -88,7 +90,7 @@ ganOpt = Adam(lr=INIT_LR_GAN, beta_1=0.5, decay=INIT_LR_GAN / NUM_EPOCHS)
 gan.compile(loss="binary_crossentropy", optimizer=ganOpt)
 
 # setting useful variable
-model = dcgan(gen, disc, gan, BATCH_SIZE, NUM_EPOCHS)
+model = dcgan(gen, disc, gan, input_noise_dim, BATCH_SIZE, NUM_EPOCHS, img_visu)
 model.train(trainImages, generated_path, plots_path=plots_path)
 model.export_training_data(plots_path)
 

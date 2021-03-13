@@ -10,6 +10,53 @@ import time
 import cv2
 import os
 
+def square(nb):
+    """Finds the dimensions of the square/rectangle having a given number of elements
+
+    Parameters
+    ----------
+    nb : int
+        number of elements expected in the square/rectangle
+
+    Returns
+    -------
+    tuple
+        dimensions of the square/rectangle
+    """
+    side = np.sqrt(nb)
+    w = int(np.floor(side))
+    h = w
+    while h*w < nb: # minimum width, adapt height
+        h+=1
+    return (w, h)
+
+def save_graph(plots_path, epoch, X, Y):
+    """Save training at intermediate state as a graph
+
+    Parameters
+    ----------
+    plots_path : string
+        path to save the graph
+    epoch : int
+        epoch for which the graph is plotted
+    X : array
+        first dataset to be plotted
+    Y : array
+        second dataset to be plotted
+    """
+    out = os.path.join(plots_path, f'loss_plots_epoch_{epoch+1}.png')
+    plt.figure(figsize=(20, 7))
+    plt.grid()
+    plt.ylim([0, 20])
+    plt.plot(X, color='r', label='disc')
+    plt.plot(Y, color='b', label='gan')
+    plt.legend()
+    plt.xlabel('Epoch #')
+    plt.ylabel('Loss')
+    plt.title(f'Mean loss (by batches of size of both models per epoch')
+    plt.savefig(out)
+    plt.close()
+
 def gpu_computation_activate():
     """To compute with GPU
     """
@@ -25,7 +72,7 @@ def gpu_computation_activate():
             # Memory growth must be set before GPUs have been initialized
             print(e)
 
-def visualization(images, size, path):
+def visualization(images, size, path, nbImg):
     """to post-process and save generated images as a montage
 
     Parameters
@@ -36,11 +83,14 @@ def visualization(images, size, path):
         size of the images
     path : string
         path to save the montage
+    nbImg : int
+        number of images to be displayed
     """
+    disp = square(nbImg)
     images = ((images * 127.5) + 127.5).astype("uint8")
     if images.shape[3]==1: # if the images are grayscale
         images = np.repeat(images, 3, axis=-1)
-    vis = build_montages(images, size, (2, 2))[0]
+    vis = build_montages(images, size, disp)[0]
     cv2.imwrite(path, vis)
 
 class timer:
@@ -112,11 +162,13 @@ class dataset_handler:
         self.image_paths = list(paths.list_files(path))
         self.image_paths = shuffle(self.image_paths)
 
-    def load(self, grayscale=False, face_detection=False, limit=None):
+    def load(self, size, grayscale=False, face_detection=False, limit=None):
         """loads all the images (grayscale) into the project
 
         Parameters
         ----------
+        size : tuple,
+            expected size of the dataset
         grayscale : bool, optional
             convert all images to grayscale if wanted, by default False
         face_detection : bool, optional
@@ -134,7 +186,7 @@ class dataset_handler:
         if face_detection:
             lg.info("...and performing face detection...")
             # the face-cropped image has the wanted shape
-            cropper = Cropper(width=config.image_shape[0], height=config.image_shape[1], face_percent=70)
+            cropper = Cropper(width=size[0], height=size[1], face_percent=70)
         if limit is not None:
             end = limit
         else:
@@ -191,7 +243,7 @@ class dataset_handler:
 class dcgan:
     """Simplify the training process
     """
-    def __init__(self, gen, disc, gan, BATCH_SIZE, NUM_EPOCHS):
+    def __init__(self, gen, disc, gan, ganInputShape, BATCH_SIZE, NUM_EPOCHS, facesPerGenerated):
         """initialisation of useful variables
 
         Parameters
@@ -202,10 +254,13 @@ class dcgan:
             model of the discriminator
         gan : tensorflow.python.keras.engine.functional.Functional
             global model
+        ganInputShape : input shape of the noise
         BATCH_SIZE : int
             batch size for the training process
         NUM_EPOCHS : int
             number of epochs to train the model
+        facesPerGenerated : int
+            number of images to be generated at the same time for visualization
         """
         self.chrono = timer()
         self.gen = gen
@@ -217,7 +272,9 @@ class dcgan:
         self.fakeLabels = np.reshape(self.fakeLabels, (-1,))
         self.dbLoss, self.gbLoss = np.zeros(BATCH_SIZE), np.zeros(BATCH_SIZE)
         self.DLOSS, self.GLOSS = np.zeros(NUM_EPOCHS), np.zeros(NUM_EPOCHS)
-        self.benchmarkNoise = np.random.uniform(-1, 1, size=(4, 100))
+        self.benchmarkNoise = np.random.uniform(-1, 1, size=(facesPerGenerated, ganInputShape))
+        self.noise_shape = ganInputShape
+        self.imgPerVisu = facesPerGenerated
 
     def train(self, trainImages, output_path, NbImages=100, plots_path=None):
         """Trains the discriminator and the global model
@@ -245,12 +302,10 @@ class dcgan:
                     # loop over the batches
                     self.dbLoss, self.gbLoss = [], []
                     for i in range(0, batchesPerEpoch):
-                        # initialize an (empty) output path
-                        p = None
                         # select the next batch of images, then randomly generate
                         # noise for the generator to predict on
                         imageBatch = trainImages[i * self.BATCH_SIZE:(i + 1) * self.BATCH_SIZE]
-                        noise = np.random.uniform(-1, 1, size=(self.BATCH_SIZE, 100))
+                        noise = np.random.uniform(-1, 1, size=(self.BATCH_SIZE, self.noise_shape))
                         # generate images using the noise + generator model
                         genImages = self.gen.predict(noise, verbose=0)
                         # concatenate the *actual* images and the *generated* images,
@@ -265,7 +320,7 @@ class dcgan:
                         # train generator via the adversarial model by
                         # (1) generating random noise and (2) training the generator
                         # with the discriminator weights frozen
-                        noise = np.random.uniform(-1, 1, (self.BATCH_SIZE, 100))
+                        noise = np.random.uniform(-1, 1, (self.BATCH_SIZE, self.noise_shape))
                         ganLoss = self.gan.train_on_batch(noise, self.fakeLabels)
                         # store loss per batches values
                         self.dbLoss.append(discLoss)
@@ -292,7 +347,7 @@ class dcgan:
                     # export visualization
                     if self.NUM_EPOCHS < NbImages:
                         images = self.gen.predict(self.benchmarkNoise)
-                        visualization(images, (W, H), os.path.join(output_path, f'Epoch_{epoch+1}.jpg'))
+                        visualization(images, (W, H), os.path.join(output_path, f'Epoch_{epoch+1}.jpg'), self.imgPerVisu)
                         # save losses as the training goes
                         if plots_path is not None:
                             X = np.zeros(self.NUM_EPOCHS)
@@ -304,7 +359,7 @@ class dcgan:
                     else:
                         if (epoch+1) % (self.NUM_EPOCHS//NbImages) == 0:
                             images = self.gen.predict(self.benchmarkNoise)
-                            visualization(images, (W, H), os.path.join(output_path, f'Epoch_{epoch+1}.jpg'))
+                            visualization(images, (W, H), os.path.join(output_path, f'Epoch_{epoch+1}.jpg'), self.imgPerVisu)
                             # save losses as the training goes
                             if plots_path is not None:
                                 X = np.zeros(self.NUM_EPOCHS)
@@ -322,7 +377,7 @@ class dcgan:
             lg.info(f'Training interrupted at epoch {epoch+1} ({round((epoch+1)/self.NUM_EPOCHS*100, 2)} %)...')
             # make a last prediction
             images = self.gen.predict(self.benchmarkNoise)
-            visualization(images, (W, H), os.path.join(output_path, f'Epoch_{epoch+1}.jpg'))
+            visualization(images, (W, H), os.path.join(output_path, f'Epoch_{epoch+1}.jpg'), self.imgPerVisu)
             pass
 
     def export_training_data(self, path):
@@ -357,30 +412,3 @@ class dcgan:
         self.gen.save(os.path.join(path, 'generator.h5'))
         self.disc.save(os.path.join(path, 'discriminator.h5'))
         self.gan.save(os.path.join(path, 'GAN.h5'))
-
-def save_graph(plots_path, epoch, X, Y):
-    """Save training at intermediate state as a graph
-
-    Parameters
-    ----------
-    plots_path : string
-        path to save the graph
-    epoch : int
-        epoch for which the graph is plotted
-    X : array
-        first dataset to be plotted
-    Y : array
-        second dataset to be plotted
-    """
-    out = os.path.join(plots_path, f'loss_plots_epoch_{epoch+1}.png')
-    plt.figure(figsize=(20, 7))
-    plt.grid()
-    plt.ylim([0, 20])
-    plt.plot(X, color='r', label='disc')
-    plt.plot(Y, color='b', label='gan')
-    plt.legend()
-    plt.xlabel('Epoch #')
-    plt.ylabel('Loss')
-    plt.title(f'Mean loss (by batches of size of both models per epoch')
-    plt.savefig(out)
-    plt.close()
