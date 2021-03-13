@@ -1,0 +1,7 @@
+tensorflow
+keras
+sklearn
+imutils
+autocrop
+matplotlib
+cv2
